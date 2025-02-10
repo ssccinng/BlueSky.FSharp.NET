@@ -23,10 +23,10 @@ module Bsky =
     let getUrlUser (url: string) =
         url.Split("/") |> Array.item 4
 
-    [<Literal>] 
-    let sample = "https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread?uri=at%3A%2F%2Fpiratesoftware.live%2Fapp.bsky.feed.post%2F3l72jf5egaw2q&depth=10"
+    //[<Literal>] 
+    //let sample = "https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread?uri=at%3A%2F%2Fpiratesoftware.live%2Fapp.bsky.feed.post%2F3l72jf5egaw2q&depth=10"
 
-    type BskyThread = JsonProvider<sample>
+    type BskyThread = JsonProvider<"./api.json", SampleIsList=true>
 
 
     let getPostThread (url: string) (depth: int) : Tweet array=
@@ -46,31 +46,29 @@ module Bsky =
                 data.GetProperty("images").AsArray() |> Array.map (fun x -> x.GetProperty("fullsize").AsString())
             else
                 [||]
-
+        
         let main = if test.Thread.Post.JsonValue.TryGetProperty("embed") |> Option.isSome then
                         {
-                        Text = test.Thread.Post.Record.Text 
-                        Title = test.Thread.Post.Uri |> getUrlId
-                        Image = getImages test.Thread.Post.Embed.JsonValue
-                        File = getVideoUrl test.Thread.Post.Embed.JsonValue
-                        DisplayName = test.Thread.Post.Author.DisplayName
+                            Text = test.Thread.Post.Record.Text 
+                            Title = test.Thread.Post.Uri |> getUrlId
+                            Image = getImages ( match test.Thread.Post.Embed with | Some x -> x.JsonValue | None -> JsonValue.Null)
+                            File = getVideoUrl ( match test.Thread.Post.Embed with | Some x -> x.JsonValue | None -> JsonValue.Null)
+                            DisplayName = test.Thread.Post.Author.DisplayName
                         }
                     else
                         {
-                        Text = test.Thread.Post.Record.Text 
-                        Title = test.Thread.Post.Uri |> getUrlId
-                        Image = [||]
-                        File = ""
-                        DisplayName = test.Thread.Post.Author.DisplayName
+                            Text = test.Thread.Post.Record.Text 
+                            Title = test.Thread.Post.Uri |> getUrlId
+                            Image = [||]
+                            File = ""
+                            DisplayName = test.Thread.Post.Author.DisplayName
                         }
 
         
         let reply = 
             test.Thread.Replies |> Seq.map (fun x -> 
                 {
-                    Text = match x.Post.Record.Text with 
-                            |Some x -> x 
-                            |None -> ""
+                    Text = x.Post.Record.Text |> Option.defaultValue ""
                     Title = x.Post.Uri |> getUrlId
                     Image = match x.Post.Embed  with
                                 | Some x -> x.Images |> Array.map (fun s -> s.Fullsize)
